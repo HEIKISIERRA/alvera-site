@@ -183,16 +183,19 @@
   }
   const vio = new IntersectionObserver(es => es.forEach(e => { seen.set(e.target, e.isIntersecting); setVideo(e.target); }), { threshold: .2 });
   if (videoOK()) $$('.ph[data-video]').forEach(host => {
-    // en pantallas pequeñas solo el hero lleva video (ahorra datos y batería)
-    if (innerWidth <= 900 && !host.closest('.hero')) return;
     const v = document.createElement('video');
-    v.muted = true; v.loop = true; v.playsInline = true; v.preload = 'none'; v.disablePictureInPicture = true;
+    v.muted = true; v.defaultMuted = true; v.loop = true; v.playsInline = true; v.preload = 'none'; v.disablePictureInPicture = true;
+    // iOS Safari exige los atributos en el DOM (no basta con las propiedades) para permitir autoplay
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
     v.setAttribute('aria-hidden', 'true'); v.tabIndex = -1;
     v.className = 'ph-video';
     v.addEventListener('playing', () => v.classList.add('on'));
     host.appendChild(v); host._video = v;
     vio.observe(host);
   });
+  // Modo de bajo consumo / autoplay bloqueado: reintenta en el primer toque o scroll
+  const retry = () => seen.forEach((vis, h) => { if (vis && h._video && h._video.paused) setVideo(h); });
+  ['touchstart', 'pointerdown', 'scroll'].forEach(ev => addEventListener(ev, retry, { once: true, passive: true }));
   // el método cambia de imagen activa: sincroniza sus videos
   new MutationObserver(ms => ms.forEach(m => setVideo(m.target))).observe(document.querySelector('.method-media'), { subtree: true, attributes: true, attributeFilter: ['class'] });
 
