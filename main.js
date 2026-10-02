@@ -190,12 +190,17 @@
     v.setAttribute('aria-hidden', 'true'); v.tabIndex = -1;
     v.className = 'ph-video';
     v.addEventListener('playing', () => v.classList.add('on'));
+    if (host.closest('.hero')) {
+      // el hero arranca ya: autoplay + src inmediato (iOS lo permite si va muted + playsinline)
+      v.autoplay = true; v.setAttribute('autoplay', ''); v.preload = 'auto'; v.src = host.dataset.video;
+      v.addEventListener('loadeddata', () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); });
+    }
     host.appendChild(v); host._video = v;
     vio.observe(host);
   });
   // Modo de bajo consumo / autoplay bloqueado: reintenta en el primer toque o scroll
   const retry = () => seen.forEach((vis, h) => { if (vis && h._video && h._video.paused) setVideo(h); });
-  ['touchstart', 'pointerdown', 'scroll'].forEach(ev => addEventListener(ev, retry, { once: true, passive: true }));
+  ['touchend', 'pointerup', 'click', 'keydown'].forEach(ev => addEventListener(ev, retry, { passive: true }));
   // el método cambia de imagen activa: sincroniza sus videos
   new MutationObserver(ms => ms.forEach(m => setVideo(m.target))).observe(document.querySelector('.method-media'), { subtree: true, attributes: true, attributeFilter: ['class'] });
 
